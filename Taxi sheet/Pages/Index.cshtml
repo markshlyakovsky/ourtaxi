@@ -1,0 +1,146 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Taxi Schedule Creator";
+}
+
+<style>
+    .schedule-table {
+        width: 100%;
+        max-width: 900px;
+        margin: 20px auto;
+        border-collapse: collapse;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+        .schedule-table th, .schedule-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .schedule-table th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .schedule-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+    .form-control {
+        width: 100%;
+        padding: 6px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .form-check-input {
+        width: 1.3em;
+        height: 1.3em;
+    }
+
+    .submit-button {
+        display: block;
+        width: 250px;
+        margin: 30px auto;
+        padding: 12px;
+        font-size: 16px;
+    }
+</style>
+
+<div class="text-center">
+    <h1 class="display-4">Create Taxi Schedule 🚕</h1>
+    <p>Select a date, choose the users to include, and set their taxi times.</p>
+</div>
+
+<form method="post">
+    <div style="max-width: 900px; margin: 20px auto; display: flex; align-items: center; gap: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">
+        <label for="scheduleDate" class="h5 mb-0"><strong>Schedule Date:</strong></label>
+        <input type="date" id="scheduleDate" asp-for="ScheduleDate" class="form-control" style="width: 200px;" />
+    </div>
+
+    <table class="schedule-table">
+        <thead>
+            <tr>
+                <th style="width: 5%;">Include</th>
+                <th style="width: 25%;">Name</th>
+                <th style="width: 35%;">Start Time (מונית הלוך)</th>
+                <th style="width: 35%;">Return Time (מונית חזור)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < Model.AllUsers.Count; i++)
+            {
+                var user = Model.AllUsers[i];
+                <tr>
+                    <td style="text-align: center;">
+                        <input type="checkbox" name="schedule[@i].IsSelected" value="true" class="form-check-input" onchange="toggleTimeInputs(this)" />
+                        <input type="hidden" name="schedule[@i].Name" value="@user.Name" />
+                        <input type="hidden" name="schedule[@i].Address" value="@user.Address" />
+                        <input type="hidden" name="schedule[@i].Phone" value="@user.Phone" />
+                        <input type="hidden" name="schedule[@i].IsSelected" value="false" />
+                    </td>
+                    <td>
+                        <strong>@user.Name</strong><br />
+                        <small>@user.Address</small>
+                    </td>
+                    <td>
+                        <select name="schedule[@i].StartTime" class="form-control" disabled onchange="updateReturnTime(this)">
+                            <option value="">-- Select Start Time --</option>
+                            @foreach (var mapping in Model.TimeMappings)
+                            {
+                                <option value="@mapping.Key" data-return-time="@mapping.Value">@mapping.Key</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <select name="schedule[@i].ReturnTime" class="form-control" disabled>
+                            <option value="">-- Select Return Time --</option>
+                            @foreach (var time in Model.AvailableReturnTimes)
+                            {
+                                <option value="@time">@time</option>
+                            }
+                        </select>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="text-center">
+        <button type="submit" class="btn btn-primary submit-button">Generate Schedule PDF</button>
+    </div>
+</form>
+
+<script>
+    function toggleTimeInputs(checkbox) {
+        var row = checkbox.closest('tr');
+        var timeInputs = row.querySelectorAll('.form-control');
+        timeInputs.forEach(function(input) {
+            input.disabled = !checkbox.checked;
+            if (!checkbox.checked) {
+                input.value = '';
+            }
+        });
+    }
+
+    // ** NEW JAVASCRIPT FUNCTION **
+    // This function is called whenever a "Start Time" dropdown is changed.
+    function updateReturnTime(startSelectElement) {
+        // Find the option that the user selected.
+        const selectedOption = startSelectElement.options[startSelectElement.selectedIndex];
+
+        // Read the default return time from that option's 'data-return-time' attribute.
+        const defaultReturnTime = selectedOption.getAttribute('data-return-time');
+
+        // Find the "Return Time" dropdown that is in the same table row.
+        const row = startSelectElement.closest('tr');
+        const returnSelectElement = row.querySelector('select[name$=".ReturnTime"]');
+
+        // Set the value of the "Return Time" dropdown.
+        // If the user selected "-- Select Start Time --", this will be null, and it will reset the return time.
+        returnSelectElement.value = defaultReturnTime || "";
+    }
+</script>
